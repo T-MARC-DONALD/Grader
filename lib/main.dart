@@ -30,6 +30,36 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+// grading helpers are now public functions so tests can access them
+
+String grade(double score) {
+  if (score >= 90) return 'A';
+  if (score >= 80) return 'B';
+  if (score >= 70) return 'C';
+  if (score >= 60) return 'D';
+  return 'F';
+}
+
+List<double> extractScores(List<List<dynamic>> rows) {
+  final scores = <double>[];
+  for (var row in rows) {
+    for (var cell in row) {
+      final numVal = parseNumber(cell);
+      if (numVal != null) {
+        scores.add(numVal);
+      }
+    }
+  }
+  return scores;
+}
+
+double? parseNumber(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  final str = value.toString().trim();
+  return double.tryParse(str);
+}
+
 class _HomePageState extends State<HomePage> {
   String _result = '';
 
@@ -49,7 +79,7 @@ class _HomePageState extends State<HomePage> {
             _result = 'No scores available to grade.';
           });
         } else {
-          String grades = scores.map((score) => '$score -> ${_grade(score)}').join('\n');
+          String grades = scores.map((score) => '$score -> ${grade(score)}').join('\n');
           setState(() {
             _result = grades;
           });
@@ -76,35 +106,7 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    return _extractScores(rows);
-  }
-
-  List<double> _extractScores(List<List<dynamic>> rows) {
-    final scores = <double>[];
-    for (var row in rows) {
-      for (var cell in row) {
-        final numVal = _parseNumber(cell);
-        if (numVal != null) {
-          scores.add(numVal);
-        }
-      }
-    }
-    return scores;
-  }
-
-  double? _parseNumber(dynamic value) {
-    if (value == null) return null;
-    if (value is num) return value.toDouble();
-    final str = value.toString().trim();
-    return double.tryParse(str);
-  }
-
-  String _grade(double score) {
-    if (score >= 90) return 'A';
-    if (score >= 80) return 'B';
-    if (score >= 70) return 'C';
-    if (score >= 60) return 'D';
-    return 'F';
+    return extractScores(rows);
   }
 
   @override

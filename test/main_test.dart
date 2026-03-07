@@ -1,14 +1,14 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import '../lib/main.dart' as app;
 
 void main() {
   group('grading logic', () {
     test('grade boundaries', () {
-      expect(app._grade(95), 'A');
-      expect(app._grade(85), 'B');
-      expect(app._grade(75), 'C');
-      expect(app._grade(65), 'D');
-      expect(app._grade(50), 'F');
+      expect(app.grade(95), 'A');
+      expect(app.grade(85), 'B');
+      expect(app.grade(75), 'C');
+      expect(app.grade(65), 'D');
+      expect(app.grade(50), 'F');
     });
   });
 
@@ -21,7 +21,7 @@ void main() {
         ['Carol', null],
         ['Dave', 'not a number'],
       ];
-      final scores = app._extractScores(rows);
+      final scores = app.extractScores(rows);
       expect(scores, containsAll(<double>[92.0, 78.5]));
       expect(scores.length, 2);
     });
