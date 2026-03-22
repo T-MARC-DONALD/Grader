@@ -1,4 +1,4 @@
-name: flutter_student_app
+name: grader
 description: Student Grade Management Application with CSV Import/Export
 publish_to: 'none'
 
@@ -15,6 +15,7 @@ dependencies:
   csv: ^5.0.0
   path_provider: ^2.0.14
   share_plus: ^6.0.0
+  excel: ^2.0.0
 
 dev_dependencies:
   flutter_test:
