@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -127,21 +128,29 @@ class _MainScreenState extends State<MainScreen> {
         allowedExtensions: ['csv'],
       );
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        
-        // Check if file exists
-        if (!await file.exists()) {
-          throw Exception('File does not exist');
-        }
-
-        // Read file with encoding handling
+      if (result != null && result.files.single.bytes != null) {
         String csv;
-        try {
-          csv = await file.readAsString(encoding: utf8);
-        } catch (e) {
-          // Try with different encoding if UTF-8 fails
-          csv = await file.readAsString(encoding: latin1);
+        
+        // Handle web vs desktop/mobile file reading
+        if (kIsWeb) {
+          // Web: read from bytes
+          csv = utf8.decode(result.files.single.bytes!);
+        } else {
+          // Desktop/Mobile: read from file path
+          final file = File(result.files.single.path!);
+          
+          // Check if file exists
+          if (!await file.exists()) {
+            throw Exception('File does not exist');
+          }
+
+          // Read file with encoding handling
+          try {
+            csv = await file.readAsString(encoding: utf8);
+          } catch (e) {
+            // Try with different encoding if UTF-8 fails
+            csv = await file.readAsString(encoding: latin1);
+          }
         }
 
         // Parse CSV with error handling
