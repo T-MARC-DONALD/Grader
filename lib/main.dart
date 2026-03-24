@@ -364,6 +364,39 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  void deleteStudent(int index) {
+    final student = students[index];
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Student'),
+        content: Text('Are you sure you want to delete ${student.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                students.removeAt(index);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${student.name} deleted'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -384,23 +417,38 @@ class _MainScreenState extends State<MainScreen> {
             const SizedBox(height: 24),
 
             // Import/Export buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Column(
               children: [
-                ElevatedButton.icon(
-                  onPressed: importCSV,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Import CSV'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: exportCSV,
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export CSV'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: addStudentManually,
-                  icon: const Icon(Icons.person_add),
-                  label: const Text('Add Student'),
+                Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: importCSV,
+                      icon: const Icon(Icons.upload_file, size: 20),
+                      label: const Text('Import CSV'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: exportCSV,
+                      icon: const Icon(Icons.download, size: 20),
+                      label: const Text('Export CSV'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: addStudentManually,
+                      icon: const Icon(Icons.person_add, size: 20),
+                      label: const Text('Add Student'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -450,46 +498,58 @@ class _MainScreenState extends State<MainScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      student.name,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: gradeColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      grade,
                                       style: const TextStyle(
-                                        fontSize: 16,
+                                        color: Colors.white,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      student.score != null
-                                          ? 'Score: ${student.score}'
-                                          : 'No Score',
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: gradeColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  grade,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          student.name,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          student.score != null
+                                              ? 'Score: ${student.score}'
+                                              : 'No Score',
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => deleteStudent(index),
+                              tooltip: 'Delete Student',
+                            ),
+                          ],
+                        ),
                         ),
                       );
                     },
