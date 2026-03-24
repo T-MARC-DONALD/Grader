@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:csv/csv.dart';
@@ -215,37 +217,151 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> exportCSV() async {
     try {
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-
-      if (selectedDirectory != null) {
-        final List<List<dynamic>> rows = [
-          ['Name', 'Score', 'Grade'],
-          ...students.map((s) => s.toCSV()),
-        ];
-
-        final csv = const ListToCsvConverter().convert(rows);
-        final file = File('$selectedDirectory/students.csv');
-        await file.writeAsString(csv);
-
+      if (students.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('CSV exported successfully!'),
+              content: Text('No students to export'),
               duration: Duration(seconds: 2),
+              backgroundColor: Colors.orange,
             ),
           );
         }
+        return;
+      }
+
+      final List<List<dynamic>> rows = [
+        ['Name', 'Score', 'Grade'],
+        ...students.map((s) => s.toCSV()),
+      ];
+
+      final csv = const ListToCsvConverter().convert(rows);
+
+      if (kIsWeb) {
+        // Web: Use share_plus to download file
+        await Share.shareXFiles([
+          XFile.fromData(
+            utf8.encode(csv),
+            name: 'students.csv',
+            mimeType: 'text/csv',
+          ),
+        ]);
+      } else {
+        // Desktop/Mobile: Use file picker to save
+        String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+
+        if (selectedDirectory != null) {
+          final file = File('$selectedDirectory/students.csv');
+          await file.writeAsString(csv);
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('CSV exported successfully!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error exporting CSV'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('Error exporting CSV: $e'),
+            duration: Duration(seconds: 3),
+            backgroundColor: Colors.red,
           ),
         );
       }
     }
+  }
+
+  void addStudentManually() {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController scoreController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Student Manually'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Student Name',
+                hintText: 'Enter student name',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: scoreController,
+              decoration: const InputDecoration(
+                labelText: 'Score (optional)',
+                hintText: 'Enter score (0-100)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final scoreText = scoreController.text.trim();
+              final score = scoreText.isNotEmpty 
+                  ? int.tryParse(scoreText) 
+                  : null;
+              
+              if (name.isNotEmpty) {
+                if (score != null && (score < 0 || score > 100)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Score must be between 0 and 100'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                setState(() {
+                  students.add(Student(name: name, score: score));
+                });
+                Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$name added successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a student name'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            child: const Text('Add Student'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -280,6 +396,11 @@ class _MainScreenState extends State<MainScreen> {
                   onPressed: exportCSV,
                   icon: const Icon(Icons.download),
                   label: const Text('Export CSV'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: addStudentManually,
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Add Student'),
                 ),
               ],
             ),
