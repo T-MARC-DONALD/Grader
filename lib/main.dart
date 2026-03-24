@@ -32,12 +32,27 @@ class Student {
   Student({required this.name, this.score});
 
   factory Student.fromList(List<dynamic> list) {
-    return Student(
-      name: list[0].toString(),
-      score: list.length > 1 && list[1] != null && list[1] != ''
-          ? int.tryParse(list[1].toString())
-          : null,
-    );
+    if (list.isEmpty) {
+      throw Exception('Empty row data');
+    }
+    
+    // Clean up name - remove quotes and extra whitespace
+    String name = list[0].toString().trim().replaceAll(RegExp(r'^"|"$'), '');
+    if (name.isEmpty) {
+      throw Exception('Student name cannot be empty');
+    }
+    
+    // Handle score parsing with better error handling
+    int? score;
+    if (list.length > 1) {
+      String scoreStr = list[1].toString().trim().replaceAll(RegExp(r'^"|"$'), '');
+      if (scoreStr.isNotEmpty) {
+        // Try to parse as integer, also handle decimal scores
+        score = (double.tryParse(scoreStr))?.round() ?? int.tryParse(scoreStr);
+      }
+    }
+    
+    return Student(name: name, score: score);
   }
 
   List<String> toCSV() {
@@ -114,14 +129,52 @@ class _MainScreenState extends State<MainScreen> {
 
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
-        final csv = await file.readAsString();
-        final rows = const CsvToListConverter().convert(csv);
+        
+        // Check if file exists
+        if (!await file.exists()) {
+          throw Exception('File does not exist');
+        }
 
+        // Read file with encoding handling
+        String csv;
+        try {
+          csv = await file.readAsString(encoding: utf8);
+        } catch (e) {
+          // Try with different encoding if UTF-8 fails
+          csv = await file.readAsString(encoding: latin1);
+        }
+
+        // Parse CSV with error handling
+        List<List<dynamic>> rows;
+        try {
+          rows = const CsvToListConverter(
+            eol: '\n', // Handle different line endings
+            shouldParseNumbers: false, // Keep everything as strings initially
+          ).convert(csv);
+        } catch (e) {
+          throw Exception('Failed to parse CSV file: $e');
+        }
+
+        // Validate CSV structure
+        if (rows.isEmpty) {
+          throw Exception('CSV file is empty');
+        }
+
+        // Import students with better error handling
         List<Student> importedStudents = [];
-        for (int i = 1; i < rows.length; i++) {
-          if (rows[i].isNotEmpty) {
-            importedStudents.add(Student.fromList(rows[i]));
+        for (int i = 1; i < rows.length; i++) { // Skip header row
+          if (rows[i].isNotEmpty && rows[i].length >= 1) {
+            try {
+              importedStudents.add(Student.fromList(rows[i]));
+            } catch (e) {
+              print('Error parsing row ${i + 1}: $e');
+              // Continue with other rows instead of failing completely
+            }
           }
+        }
+
+        if (importedStudents.isEmpty) {
+          throw Exception('No valid student data found in CSV');
         }
 
         setState(() {
@@ -131,8 +184,9 @@ class _MainScreenState extends State<MainScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Imported ${students.length} students'),
+              content: Text('Successfully imported ${students.length} students'),
               duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green,
             ),
           );
         }
@@ -140,9 +194,10 @@ class _MainScreenState extends State<MainScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error importing CSV'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('Error importing CSV: $e'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
           ),
         );
       }
